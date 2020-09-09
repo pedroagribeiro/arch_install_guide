@@ -102,4 +102,151 @@ prompted about the last sector type just press `ENTER`, in order to give it the
 remaining space. This time around the filesystem is correct so we are to move
 on with the installation.
 
+Lastly you have to write the table to the disk. In order to that just press `w`
+on the `fdik` menu and will write the table and automatically exit the program.
+
+We have to bind to bind file formats to the partitions that we created:
+
+```bash
+mkfs.fat -F32 /dev/sda1
+mkswap /dev/sda2
+swapon /dev/sda2
+mkfs.ext4 /dev/sda3
+```
+
+To mount our filesystem partition:
+
+```bash
+mount /dev/sda3 /mnt
+```
+
+Now, let's install the base system (it will take a minute):
+
+```bash
+pacstrap /mnt base base-devel linux linux-firmware
+```
+
+Let's generate out filesystem table:
+
+```bash
+genfstab -U /mnt >> /mnt/etc/fstab
+```
+
+Now, execute:
+
+```bash
+arch-chroot /mnt
+```
+
+Set your timezone by running:
+
+```bash
+ln -sf /usr/share/zoneinfo/<REGION>/<CITY> /etc/localtime
+```
+
+In my case:
+
+```bash
+ln -sf /usr/share/zoneinfo/Europe/Lisbon /etc/localtime
+```
+
+Set your hardware clock:
+
+```bash
+hwclock --systohc
+```
+
+Let's edit `locale.gen` (you might need to install a text editor):
+
+```bash
+vim /etc/locale.gen
+```
+
+In the previous file uncomment the line that corresponds to your locale.
+
+Run:
+
+```bash
+locale-gen
+```
+
+You need to set the hostname:
+
+```bash
+vim /etc/hostname
+```
+
+In the previous file just write the hostname that you want.
+
+Let's add the hosts now:
+
+Edit the following file and write the following content:
+
+```bash
+vim /etc/hosts
+```
+
+Text to past:
+
+```bash
+127.0.0.1       localhost
+::1             localhosta
+127.0.0.1       <hostname>.localdomain  <hostname>
+```
+
+At this point the only user that there is our system is **root** so let's give
+a password:
+
+Run `passwd` and chosse a new password for this user. Create a new user by
+running: `useradd -m <username>` and give a password by running: `passwd
+<username>`. You may want to add the user to some groups like `wheel` in order
+for it to be possible to him to act as **root**, for example. If you to do that
+just run `usermod -aG wheel,audio,video,optical,storage <username>`.
+
+Install `sudo`:
+
+```bash
+pacman -S sudo
+```
+
+Run `visudo` and uncomment the following line:
+
+`# %wheel ALL=(ALL) ALL`
+
+In order for the user to be able to use the `sudo` command.
+
+We need to install `grub` and some other software needed for **EFI**:
+
+```bash
+pacman -S grub efibootmgr dosfstools os-prober mtools
+```
+
+It is mandatory to make an **EFI** directory in our boot directory:
+
+`mkdir /boot/EFI`
+
+Mount the **EFI** partition:
+
+`mount /dev/sda1 /boot/EFI`
+
+Let's install `grub` to a proper partition:
+
+```bash
+grub-install --target=x86_64-efi --bootloader-id=grub_uefi --recheck
+```
+
+We need a `grub` configuration file:
+
+```bash
+grub-mkconfig -o /boot/grub/grub.cfg
+```
+
+At this point you have a functional **Arch Linux** installation. You should
+probably install `networkmanager` in order to maximize your chances of having
+internet when you reboot.
+
+If you installed `networkmanager` you can enable it by running:
+
+`systemctl enable NetworkManger`
+
 
